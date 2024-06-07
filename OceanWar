@@ -1,0 +1,545 @@
+using System;
+
+namespace SeaBattle
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            int[,] playerField = new int[10, 10];
+            int[,] computerField = new int[10, 10];
+            int[,] enemyField = new int[10, 10];
+
+            // Размещение кораблей на игровом поле
+            PlaceShips(playerField, enemyField);
+            PlaceComputerShips(computerField);
+
+            bool isPlayerTurn = true;
+            bool isGameOver = false;
+
+            while (!isGameOver)
+            {
+                Console.Clear();
+                DisplayField(playerField,enemyField, computerField, isPlayerTurn);
+
+                if (isPlayerTurn)
+                {
+                    Console.WriteLine("Ваш ход:");
+                    int[] playerShot = GetPlayerShot();
+                    if (HandleShot(computerField, enemyField, playerShot))
+                    {
+                        Console.WriteLine("Попадание!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Промах.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Ход компьютера:");
+                    int[] computerShot = GetComputerShot();
+                    if (HandleShot(playerField, enemyField, computerShot))
+                    {
+                        Console.WriteLine("Компьютер попал!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Компьютер промахнулся.");
+                    }
+                }
+
+
+                isPlayerTurn = !isPlayerTurn;
+                isGameOver = IsGameOver(playerField, computerField);
+            }
+
+            Console.Clear();
+            DisplayField(playerField, computerField,enemyField, isPlayerTurn);
+
+            if (IsPlayerWin(playerField, computerField))
+            {
+                Console.WriteLine("Поздравляем! Вы победили.");
+            }
+            else
+            {
+                Console.WriteLine("Компьютер победил.");
+            }
+        }
+
+        static void PlaceShips(int[,] field , int[,] enemyField)
+        {
+            Console.WriteLine("Расставьте ваши корабли:");
+
+            // Размещение корабля длиной 4 клетки
+            Console.WriteLine("Корабль длиной 4 клетки:");
+            PlaceShipInteractive(field, 4);
+
+            // Размещение двух кораблей длиной 3 клетки
+            Console.WriteLine("Два корабля длиной 3 клетки:");
+            PlaceShipInteractive(field, 3);
+            PlaceShipInteractive(field, 3);
+
+            // Размещение трех кораблей длиной 2 клетки
+            Console.WriteLine("Три корабля длиной 2 клетки:");
+            PlaceShipInteractive(field, 2);
+            PlaceShipInteractive(field, 2);
+            PlaceShipInteractive(field, 2);
+
+            // Размещение четырех кораблей длиной 1 клетка
+            Console.WriteLine("Четыре корабля длиной 1 клетка:");
+            PlaceShipInteractive(field, 1);
+            PlaceShipInteractive(field, 1);
+            PlaceShipInteractive(field, 1);
+            PlaceShipInteractive(field, 1);
+
+
+            for (int row = 0; row < 10; row++)
+            {
+                for (int col = 0; col < 10; col++)
+                {
+                    enemyField[row, col] = 0; // Все клетки поля противника изначально пустые
+                }
+            }
+        }
+        static bool MakeShot(int[,] playerField, int[,] enemyField, int row, int col)
+        {
+            if (playerField[row, col] == 1) // Корабль игрока
+            {
+                playerField[row, col] = 2; // Корабль поврежден
+                enemyField[row, col] = 2; // Отмечаем попадание на поле противника
+                return true; // Попадание
+            }
+            else if (playerField[row, col] == 0) // Пустая клетка
+            {
+                playerField[row, col] = 3; // Отметить промах
+                enemyField[row, col] = 3; // Отметить промах на поле противника
+                return false; // Промах
+            }
+            else // Клетка уже была обстреляна
+            {
+                return false; // Клетка уже была обстреляна
+            }
+        }
+
+
+        static void DisplayEnemyField(int[,] enemyField)
+        {
+            Console.WriteLine("Поле противника:");
+            Console.WriteLine("A B C D E F G H I J");
+            for (int row = 0; row < 10; row++)
+            {
+                Console.Write($"{row + 1} ");
+                for (int col = 0; col < 10; col++)
+                {
+                    switch (enemyField[row, col])
+                    {
+                        case 0:
+                            Console.Write("~ "); // Неисследованная клетка
+                            break;
+                        case 2:
+                            Console.Write("X "); // Попадание
+                            break;
+                        case 3:
+                            Console.Write("O "); // Промах
+                            break;
+                    }
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine();
+        }
+
+        static void PlaceShipInteractive(int[,] field, int shipLength)
+        {
+            bool placed = false;
+            while (!placed)
+            {
+                Console.Write($"Введите координаты для корабля длиной {shipLength} клетки (например, A1 B1): ");
+                string input = Console.ReadLine();
+                string[] coordinates = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (coordinates.Length == shipLength)
+                {
+                    bool canPlaceShip = true;
+                    for (int i = 0; i < shipLength; i++)
+                    {
+                        if (!ValidateCoordinates(coordinates[i], out int row, out int col) || !CanPlaceShip(field, row, col, 1, true))
+                        {
+                            canPlaceShip = false;
+                            break;
+                        }
+                        PlaceShipPart(field, row, col, 1, true);
+                    }
+
+                    if (canPlaceShip)
+                    {
+                        placed = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Не удалось разместить корабль. Попробуйте другие координаты.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Некорректный ввод координат. Попробуйте еще раз.");
+                }
+            }
+        }
+
+
+        static void PlaceComputerShips(int[,] field)
+        {
+            // Размещение кораблей компьютера
+            PlaceShip(field, 4, 1); // Размещение корабля длиной 4 клетки
+            PlaceShip(field, 3, 2); // Размещение двух кораблей длиной 3 клетки
+            PlaceShip(field, 2, 3); // Размещение трех кораблей длиной 2 клетки
+            PlaceShip(field, 1, 4); // Размещение четырех кораблей длиной 1 клетка
+        } 
+        static void PlaceShip(int[,] field, int shipLength, int count)
+        {
+            Random random = new Random();
+
+            for (int i = 0; i < count; i++)
+            {
+                bool placed = false;
+                while (!placed)
+                {
+                    int row = random.Next(0, 10);
+                    int col = random.Next(0, 10);
+                    bool horizontal = random.NextDouble() < 0.5;
+
+                    if (CanPlaceShip(field, row, col, shipLength, horizontal))
+                    {
+                        PlaceShipPart(field, row, col, shipLength, horizontal);
+                        placed = true;
+                    }
+                }
+            }
+        }
+        static bool IsFirstShip(int[,] field)
+        {
+            // Проверяем, есть ли корабли на поле
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    if (field[i, j] == 1)
+                        return false;
+                }
+            }
+            return true;
+        }
+        static bool CanPlaceShip(int[,] field, int row, int col, int size, bool horizontal)
+        {
+            // Проверяем, что корабль помещается в пределах поля
+            if (horizontal)
+            {
+                if (col + size - 1 >= 10)
+                    return false;
+            }
+            else
+            {
+                if (row + size - 1 >= 10)
+                    return false;
+            }
+
+            // Если это первый корабль, просто проверяем клетки, где он будет размещен
+            if (IsFirstShip(field))
+            {
+                if (horizontal)
+                {
+                    for (int i = col; i < col + size; i++)
+                    {
+                        if (field[row, i] == 1)
+                            return false;
+                    }
+                }
+                else
+                {
+                    for (int i = row; i < row + size; i++)
+                    {
+                        if (field[i, col] == 1)
+                            return false;
+                    }
+                }
+                return true;
+            }
+
+            // Проверяем, что вокруг будущего корабля нет других кораблей
+            for (int i = Math.Max(row - 1, 0); i <= Math.Min(row + 1, 9); i++)
+            {
+                for (int j = Math.Max(col - 1, 0); j <= Math.Min(col + 1, 9); j++)
+                {
+                    // Пропускаем клетки, где будет размещен корабль
+                    if (horizontal && j >= col && j < col + size)
+                        continue;
+                    if (!horizontal && i >= row && i < row + size)
+                        continue;
+
+                    // Если в соседней клетке есть корабль, возвращаем false
+                    if (field[i, j] == 1)
+                        return false;
+                }
+            }
+
+            // Если проверки пройдены, можно разместить корабль
+            return true;
+        }
+
+
+
+        static void PlaceShipPart(int[,] field, int row, int col, int length, bool horizontal)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                if (horizontal)
+                {
+                    field[row, col + i] = 1;
+                }
+                else
+                {
+                    field[row + i, col] = 1;
+                }
+            }
+        }
+
+        static int[] GetPlayerShot()
+        {
+            // Получение координат выстрела игрока с проверкой
+            
+            while (true)
+            {
+                Console.Write("Введите координаты выстрела (например, A1): ");
+                string input = Console.ReadLine();
+                if (ValidateCoordinates(input, out int row, out int col))
+                {
+                    return new int[] { row, col };
+
+                }
+                else
+                {
+                    Console.WriteLine("Неверные координаты. Попробуйте снова.");
+                }
+            }
+        }
+
+        static int[] GetComputerShot()
+        {
+            // Генерация случайных координат выстрела компьютера
+            Random random = new Random();
+            return new int[] { random.Next(0, 10), random.Next(0, 10) };
+        }
+
+        static bool HandleShot(int[,] targetField, int[,] enemyField, int[] shot)
+        {
+            int row = shot[0];
+            int col = shot[1];
+
+            if (targetField[row, col] == 1) // Корабль
+            {
+                targetField[row, col] = 2; // Корабль поврежден
+                enemyField[row, col] = 2; // Отмечаем попадание на поле противника
+
+                // Проверяем, был ли корабль уничтожен
+                if (IsShipDestroyed(targetField, row, col))
+                {
+                    MarkSurroundingCells(targetField, row, col);
+                    MarkSurroundingCells(enemyField, row, col);
+                }
+
+                return true;
+            }
+            else if (targetField[row, col] == 0) // Пустая клетка
+            {
+                targetField[row, col] = 3; // Отмечаем промах
+                enemyField[row, col] = 3; // Отмечаем промах на поле противника
+                return false;
+            }
+            else // Клетка уже была обстреляна
+            {
+                Console.WriteLine("Эта клетка уже была обстреляна.");
+                return false;
+            }
+        }
+
+
+
+        static bool IsGameOver(int[,] playerField, int[,] computerField)
+        {
+            // Проверка окончания игры
+            bool playerHasShips = false;
+            bool computerHasShips = false;
+
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    if (playerField[i, j] == 1)
+                    {
+                        playerHasShips = true;
+                    }
+                    if (computerField[i, j] == 1)
+                    {
+                        computerHasShips = true;
+                    }
+                }
+            }
+
+            return !playerHasShips || !computerHasShips;
+        }
+
+        static void DisplayField(int[,] playerField, int[,] computerField, int[,] enemyField, bool isPlayerTurn)
+        {
+            Console.WriteLine("Ваше поле:");
+            Console.WriteLine(" A B C D E F G H I J ");
+            DisplayPlayerField(playerField);
+
+            Console.WriteLine("Поле противника:");
+            Console.WriteLine("\n A B C D E F G H I J ");
+            DisplayEnemyField(enemyField, isPlayerTurn);
+        }
+        static bool IsShipDestroyed(int[,] field, int row, int col)
+        {
+            // Проверяем, что в текущей клетке есть корабль (не пустая клетка и не промах)
+            if (field[row, col] == 1 || field[row, col] == 2)
+            {
+                // Проверяем соседние клетки
+                for (int i = row - 1; i <= row + 1; i++)
+                {
+                    for (int j = col - 1; j <= col + 1; j++)
+                    {
+                        // Убеждаемся, что клетка находится в пределах игрового поля
+                        if (i >= 0 && i < 10 && j >= 0 && j < 10)
+                        {
+                            // Если хотя бы одна соседняя клетка содержит корабль, корабль не уничтожен
+                            if (field[i, j] == 1)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                // Если ни одна соседняя клетка не содержит корабля, корабль уничтожен
+                return true;
+            }
+
+            // Если текущая клетка не содержит корабля, возвращаем false
+            return false;
+        }
+
+        static void DisplayPlayerField(int[,] field)
+        {
+            for (int row = 0; row < 10; row++)
+            {
+                Console.Write((row + 1) + " ");
+                for (int col = 0; col < 10; col++)
+                {
+                    if (field[row, col] == 0)
+                    {
+                        Console.Write("~ ");
+                    }
+                    else if (field[row, col] == 1)
+                    {
+                        Console.Write("* ");
+                    }
+                    else if (field[row, col] == 2)
+                    {
+                        Console.Write("X ");
+                    }
+                    else if (field[row, col] == 3)
+                    {
+                        Console.Write(". ");
+                    }
+                }
+                Console.WriteLine();
+            }
+        }
+        static void MarkSurroundingCells(int[,] field, int row, int col)
+        {
+            // Проверяем клетки вокруг уничтоженного корабля
+            for (int i = Math.Max(row - 1, 0); i <= Math.Min(row + 1, 9); i++)
+            {
+                for (int j = Math.Max(col - 1, 0); j <= Math.Min(col + 1, 9); j++)
+                {
+                    // Если клетка пустая, отмечаем ее как промах
+                    if (field[i, j] == 0)
+                    {
+                        field[i, j] = 3;
+                    }
+                }
+            }
+        }
+
+
+        static void DisplayEnemyField(int[,] enemyField, bool isPlayerTurn)
+        {
+            for (int row = 0; row < 10; row++)
+            {
+                Console.Write((row + 1) + " ");
+                for (int col = 0; col < 10; col++)
+                {
+                    if (enemyField[row, col] == 0)
+                    {
+                        Console.Write("~ ");
+                    }
+                    else if (enemyField[row, col] == 1)
+                    {
+                        Console.Write("~ ");
+                    }
+                    else if (enemyField[row, col] == 2)
+                    {
+                        Console.Write("X ");
+                    }
+                    else if (enemyField[row, col] == 3)
+                    {
+                        Console.Write("O ");
+                    }
+                }
+                Console.WriteLine();
+            }
+        }
+
+
+        static bool IsPlayerWin(int[,] playerField, int[,] computerField)
+        {
+            // Проверка победы игрока
+            bool playerHasShips = false;
+            bool computerHasShips = false;
+
+            for (int i = 0; i < 10; i++)
+            {
+                for (int j = 0; j < 10; j++)
+                {
+                    if (playerField[i, j] == 1)
+                    {
+                        playerHasShips = true;
+                    }
+                    if (computerField[i, j] == 1)
+                    {
+                        computerHasShips = true;
+                    }
+                }
+            }
+
+            return !computerHasShips;
+        }
+
+        static bool ValidateCoordinates(string input, out int row, out int col)
+        {
+            // Проверка корректности координат
+            if (input.Length < 2 || input.Length > 3 || !char.IsLetter(input[0]) || !int.TryParse(input.Substring(1), out int num))
+            {
+                row = -1;
+                col = -1;
+                return false;
+            }
+
+            row = num - 1;
+            col = char.ToUpper(input[0]) - 'A';
+            return true;
+        }
+    }
+}
