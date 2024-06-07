@@ -231,60 +231,40 @@ namespace SeaBattle
             }
             return true;
         }
-        static bool CanPlaceShip(int[,] field, int row, int col, int size, bool horizontal)
+        private static bool CanPlaceShip(int[,] field, int row, int col, int length, bool horizontal)
         {
-            // Проверяем, что корабль помещается в пределах поля
-            if (horizontal)
-            {
-                if (col + size - 1 >= 10)
-                    return false;
-            }
-            else
-            {
-                if (row + size - 1 >= 10)
-                    return false;
-            }
+            // Проверяем, что корабль не выходит за границы поля
+            if (horizontal && col + length - 1 >= 10 || !horizontal && row + length - 1 >= 10)
+                return false;
 
-            // Если это первый корабль, просто проверяем клетки, где он будет размещен
-            if (IsFirstShip(field))
-            {
-                if (horizontal)
-                {
-                    for (int i = col; i < col + size; i++)
-                    {
-                        if (field[row, i] == 1)
-                            return false;
-                    }
-                }
-                else
-                {
-                    for (int i = row; i < row + size; i++)
-                    {
-                        if (field[i, col] == 1)
-                            return false;
-                    }
-                }
+            // Если это первый корабль, разрешаем размещение
+            if (field.Cast<int>().Count(x => x == 1) == 0)
                 return true;
+
+            // Проверяем, что вокруг корабля нет других кораблей
+            for (int i = 0; i < length; i++)
+            {
+                int checkRow = horizontal ? row : row + i;
+                int checkCol = horizontal ? col + i : col;
+
+                // Проверяем текущую клетку
+                if (field[checkRow, checkCol] == 1)
+                    return false;
             }
 
-            // Проверяем, что вокруг будущего корабля нет других кораблей
-            for (int i = Math.Max(row - 1, 0); i <= Math.Min(row + 1, 9); i++)
+            // Проверяем соседние клетки
+            for (int i = -1; i <= 1; i++)
             {
-                for (int j = Math.Max(col - 1, 0); j <= Math.Min(col + 1, 9); j++)
+                for (int j = -1; j <= 1; j++)
                 {
-                    // Пропускаем клетки, где будет размещен корабль
-                    if (horizontal && j >= col && j < col + size)
-                        continue;
-                    if (!horizontal && i >= row && i < row + size)
-                        continue;
+                    int neighborRow = horizontal ? row : row + i;
+                    int neighborCol = horizontal ? col + j : col;
 
-                    // Если в соседней клетке есть корабль, возвращаем false
-                    if (field[i, j] == 1)
+                    if (neighborRow >= 0 && neighborRow < 10 && neighborCol >= 0 && neighborCol < 10 && field[neighborRow, neighborCol] == 1)
                         return false;
                 }
             }
 
-            // Если проверки пройдены, можно разместить корабль
             return true;
         }
 
